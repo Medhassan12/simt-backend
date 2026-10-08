@@ -228,7 +228,7 @@
 
       document.getElementById('login-section').classList.add('hidden');
       document.getElementById('app-section').classList.remove('hidden');
-      document.getElementById('user-display').innerText = `${user.email} (${user.institution || 'DT'})`;
+      document.getElementById('user-display').innerText = `${user.email || 'Admin'} (${user.institution || 'DT'})`;
 
       loadUsers();
       renderCharts();
@@ -248,11 +248,14 @@
         tbody.innerHTML = '';
 
         users.forEach(u => {
+          // Skip empty or corrupted records lacking an email address
+          if (!u || !u.email) return;
+
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td>${u.email}</td>
-            <td><span class="badge bg-secondary">${u.role}</span></td>
-            <td>${u.institution}</td>
+            <td><span class="badge bg-secondary">${u.role || ''}</span></td>
+            <td>${u.institution || ''}</td>
             <td>
               ${u.email !== 'admin@travail.gov.dj' ? 
                 `<button class="btn btn-sm btn-outline-danger" onclick="deleteUser('${u.email}')">Supprimer</button>` : 
