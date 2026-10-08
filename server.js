@@ -6,24 +6,24 @@ const jwt = require('jsonwebtoken');
 
 const app = express();
 
-// Augmenter la limite pour supporter l'envoi de fichiers CSV volumineux
+// Increase JSON payload limit to handle bulk CSV imports
 app.use(express.json({ limit: '10mb' }));
 
-// Configuration CORS pour autoriser l'accès depuis GitHub Pages
+// Enable CORS for all incoming origins and required HTTP methods
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Connexion Supabase
+// Supabase Configuration
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://fleglctqwzvcnvpdoxfy.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_KEY; 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const JWT_SECRET = process.env.JWT_SECRET || 'simt_djibouti_secret_key';
 
-// Middleware de vérification du Token JWT
+// JWT Verification Middleware
 function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -36,12 +36,17 @@ function authenticateToken(req, res, next) {
   });
 }
 
-// Route de test d'état du serveur
+// Health Check Route
 app.get('/', (req, res) => res.send('SIMT Djibouti Backend API Online'));
 
-// 1. ROUTE DE CONNEXION (LOGIN)
+// 1. LOGIN ROUTE
 app.post('/api/login', async (req, res) => {
   const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Veuillez fournir un e-mail et un mot de passe.' });
+  }
+
   try {
     const { data: user, error } = await supabase
       .from('users')
@@ -58,14 +63,20 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ message: 'Identifiants invalides' });
     }
 
-    const token = jwt.sign({ id: user.id, email: user.email, role: user.role, institution: user.institution }, JWT_SECRET, { expiresIn: '8h' });
+    const token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role, institution: user.institution }, 
+      JWT_SECRET, 
+      { expiresIn: '8h' }
+    );
+
     res.json({ token, user: { email: user.email, role: user.role, institution: user.institution } });
   } catch (err) {
-    res.status(500).json({ message: 'Erreur serveur.' });
+    console.error('Login error:', err);
+    res.status(500).json({ message: 'Erreur serveur lors de la connexion.' });
   }
 });
 
-// 2. ROUTE RECUPERATION DES UTILISATEURS
+// 2. GET USERS ROUTE
 app.get('/api/users', authenticateToken, async (req, res) => {
   try {
     const { data, error } = await supabase.from('users').select('id, email, nom, role, institution');
@@ -76,7 +87,7 @@ app.get('/api/users', authenticateToken, async (req, res) => {
   }
 });
 
-// 3. ROUTE CREATION D'UTILISATEUR
+// 3. CREATE USER ROUTE
 app.post('/api/users', authenticateToken, async (req, res) => {
   const { email, nom, password, role, institution } = req.body;
   try {
@@ -92,7 +103,7 @@ app.post('/api/users', authenticateToken, async (req, res) => {
   }
 });
 
-// 4. ROUTE SUPPRESSION D'UTILISATEUR
+// 4. DELETE USER ROUTE
 app.delete('/api/users/:email', authenticateToken, async (req, res) => {
   try {
     const { email } = req.params;
@@ -114,7 +125,7 @@ app.delete('/api/users/:email', authenticateToken, async (req, res) => {
   }
 });
 
-// 5. ROUTE IMPORTATION MASSIVE DE DONNÉES CSV
+// 5. BULK CSV DATA IMPORT ROUTE
 app.post('/api/indicators/import', authenticateToken, async (req, res) => {
   try {
     const { data } = req.body;
@@ -122,7 +133,6 @@ app.post('/api/indicators/import', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Aucune donnée fournie.' });
     }
 
-    // Normalisation des colonnes reçues du fichier CSV vers la table Supabase
     const formattedRecords = data.map(row => ({
       institution: req.user.institution || 'DT',
       indicator_code: row.code || row.indicator_code || 'IND_GENERIC',
