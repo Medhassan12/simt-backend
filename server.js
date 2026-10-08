@@ -38,6 +38,33 @@ const auth = (roles = []) => (q, r, n) => {
 
 const ADMIN = auth(['admin']);
 const WRITER = auth(['admin', 'data_admin']);
+// --- ADD LOGIN ROUTE HERE ---
+app.post('/login', wrap(async (req, res) => {
+  const { email, password } = req.body;
+
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  if (email === adminEmail && password === adminPassword) {
+    const token = jwt.sign(
+      { email, role: 'admin' },
+      jwtSecret,
+      { expiresIn: '24h' }
+    );
+    return res.json({ token, role: 'admin' });
+  }
+
+  res.status(401).json({ error: 'Email ou mot de passe incorrect' });
+}));
+
+// Health Check Route
+app.get('/', (req, res) => res.send('API is running successfully!'));
+
+// Start Server
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+});
 
 // Health Check Route
 app.get('/', (req, res) => res.send('API is running successfully!'));
