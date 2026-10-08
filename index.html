@@ -1,205 +1,209 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tableau de Bord - SIMNT</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SIMT Djibouti – Système d'Information sur le Marché du Travail</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <style>
-    :root {
-      --primary: #0284c7;
-      --primary-hover: #0369a1;
-      --bg: #f8fafc;
-      --card-bg: #ffffff;
-      --text: #0f172a;
-      --border: #e2e8f0;
-    }
-
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-      margin: 0;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 800px;
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 24px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-      margin-bottom: 20px;
-    }
-
-    h1, h2 {
-      margin-top: 0;
-      color: var(--primary);
-    }
-
-    .status-badge {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 12px;
-      font-size: 0.85rem;
-      font-weight: bold;
-      margin-bottom: 15px;
-    }
-
-    .status-badge.online { background-color: #dcfce7; color: #15803d; }
-    .status-badge.offline { background-color: #fee2e2; color: #b91c1c; }
-
-    form {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    input, button {
-      padding: 10px 14px;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-      font-size: 1rem;
-    }
-
-    button {
-      background-color: var(--primary);
-      color: white;
-      border: none;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-
-    button:hover {
-      background-color: var(--primary-hover);
-    }
-
-    .hidden { display: none; }
-    
-    .alert {
-      padding: 10px;
-      border-radius: 6px;
-      margin-top: 10px;
-      font-size: 0.9rem;
-    }
-    .alert-error { background-color: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
-    .alert-success { background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    body { background: #0f172a; color: #e2e8f0; font-family: system-ui, sans-serif; }
+    .c { background: #1e293b; border: 1px solid #334155; border-radius: .5rem; padding: 1rem; }
+    input, select, textarea { background: #0f172a; border: 1px solid #475569; border-radius: .375rem; padding: .4rem .6rem; width: 100%; }
+    button.b { background: #0ea5e9; color: #fff; border-radius: .375rem; padding: .4rem .9rem; }
+    button.b:hover { background: #0284c7; }
+    th, td { text-align: left; padding: .4rem .6rem; border-bottom: 1px solid #334155; }
+    a:focus, button:focus, input:focus, select:focus { outline: 2px solid #38bdf8; }
   </style>
 </head>
 <body>
-
-  <div class="container">
-    <h1>Système LMIS - Backend Render</h1>
-    <div id="apiStatus" class="status-badge offline">Connexion au serveur...</div>
-  </div>
-
-  <!-- Login Form -->
-  <div class="container" id="loginCard">
-    <h2>Connexion Administration</h2>
-    <form id="loginForm">
-      <div>
-        <label for="email">Email</label>
-        <input type="email" id="email" value="admin@travail.gov.dj" required>
-      </div>
-      <div>
-        <label for="password">Mot de passe</label>
-        <input type="password" id="password" value="Mohamed123" required>
-      </div>
-      <button type="submit">Se connecter</button>
-    </form>
-    <div id="loginMessage" class="alert hidden"></div>
-  </div>
-
-  <!-- Dashboard View (Shown after login) -->
-  <div class="container hidden" id="dashboardCard">
-    <h2>Bienvenue Administrateur</h2>
-    <p>Vous êtes connecté avec succès à l'API Render.</p>
-    <button id="logoutBtn" style="background-color: #ef4444;">Déconnexion</button>
-  </div>
+  <header class="flex flex-wrap items-center justify-between gap-2 p-4 border-b border-slate-700">
+    <div>
+      <h1 class="text-xl font-bold">SIMT Djibouti</h1>
+      <p class="text-sm text-slate-400">Ministère du Travail · Projet conjoint OIT · .Stat / SDMX</p>
+    </div>
+    <div class="text-sm flex items-center gap-3"><span id="who"></span></div>
+  </header>
+  
+  <nav id="nav" class="flex flex-wrap gap-2 p-3"></nav>
+  <main id="app" class="p-4 max-w-6xl mx-auto"></main>
 
   <script>
-    // Live Render API Endpoint
-    const API_URL = 'https://slmt-backend-kmsm.onrender.com';
+    // Live SIMT Render Backend Endpoint
+    const API = 'https://slmt-backend-kmsm.onrender.com';
 
-    // DOM Elements
-    const apiStatus = document.getElementById('apiStatus');
-    const loginCard = document.getElementById('loginCard');
-    const dashboardCard = document.getElementById('dashboardCard');
-    const loginForm = document.getElementById('loginForm');
-    const loginMessage = document.getElementById('loginMessage');
-    const logoutBtn = document.getElementById('logoutBtn');
+    let S = { tab: 'dash', user: JSON.parse(localStorage.u || 'null'), token: localStorage.t || '' };
 
-    // 1. Health check to test backend connection
-    async function checkBackendConnection() {
-      try {
-        const res = await fetch(`${API_URL}/`);
-        if (res.ok) {
-          apiStatus.textContent = '● Serveur Connecté';
-          apiStatus.className = 'status-badge online';
-        } else {
-          throw new Error('Erreur réseau');
-        }
-      } catch (err) {
-        apiStatus.textContent = '● Serveur Hors Ligne';
-        apiStatus.className = 'status-badge offline';
-      }
+    const $ = s => document.querySelector(s);
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    async function api(p, m = 'GET', b) {
+      const r = await fetch(API + p, {
+        method: m,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + S.token
+        },
+        body: b ? JSON.stringify(b) : undefined
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || 'Erreur');
+      return j;
     }
 
-    // 2. Handle Login Submission
-    loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      loginMessage.className = 'alert hidden';
+    const role = () => S.user?.role;
+    const isAdmin = () => role() === 'admin';
+    const canW = () => ['admin', 'data_admin'].includes(role());
 
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
+    const TABS = () => [
+      ['dash', 'Tableau de bord'],
+      ['ind', 'Indicateurs'],
+      ['obs', 'Données'],
+      ['df', 'Dataflows'],
+      ['req', 'Déposer un besoin'],
+      ...(S.user ? [['act', 'Plan d\'actions']] : []),
+      ...(isAdmin() ? [['adm', 'Administration']] : []),
+      ['login', S.user ? 'Déconnexion' : 'Connexion']
+    ];
 
+    function nav() {
+      $('#who').innerHTML = S.user 
+        ? `${esc(S.user.nom || S.user.email)} · <b>${esc({ admin: 'Contrôleur principal', data_admin: 'Administrateur de données', lecteur: 'Lecteur' }[role()] || role())}</b>` 
+        : 'Visiteur';
+      $('#nav').innerHTML = TABS().map(([k, l]) => `<button class="px-3 py-1 rounded ${S.tab === k ? 'bg-sky-600' : 'bg-slate-700'}" onclick="go('${k}')">${l}</button>`).join('');
+    }
+
+    function go(t) {
+      if (t === 'login' && S.user) {
+        localStorage.clear();
+        S.user = null;
+        S.token = '';
+        t = 'dash';
+      }
+      S.tab = t;
+      nav();
+      V[t]().catch(e => $('#app').innerHTML = `<p class="c text-red-300">${esc(e.message)} (l'API Render peut mettre 30 s à se réveiller)</p>`);
+    }
+
+    const tbl = (h, rows) => `<div class="c overflow-x-auto"><table class="w-full text-sm"><tr>${h.map(x => `<th>${x}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(x => `<td>${x}</td>`).join('')}</tr>`).join('') || '<tr><td colspan="${h.length}">Aucune donnée pour le moment.</td></tr>'}</table></div>`;
+    const f = (id, l, t = 'text') => `<label class="block text-sm mb-2">${l}<input id="${id}" type="${t}"></label>`;
+    const v = id => $('#' + id).value;
+    const send = async (fn, msg) => {
       try {
-        const response = await fetch(`${API_URL}/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+        await fn();
+        alert(msg);
+        go(S.tab);
+      } catch (e) {
+        alert(e.message);
+      }
+    };
+
+    const V = {
+      async dash() {
+        const k = await api('/kpi');
+        const o = await api('/observations');
+        const card = (a, b) => `<div class="c"><div class="text-3xl font-bold">${a}</div><div class="text-sm text-slate-400">${b}</div></div>`;
+        
+        $('#app').innerHTML = `<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+          ${card(k.taux_documentes + ' %', 'Indicateurs documentés (' + k.nb_indicateurs + ')')}
+          ${card(k.dataflows_valides + ' / ' + k.dataflows_total, 'Dataflows validés')}
+          ${card(k.observations, 'Observations')}
+          ${card(k.disponibilite, 'Disponibilité de la plateforme')}
+        </div>
+        <div class="grid md:grid-cols-2 gap-3">
+          <div class="c"><h2 class="font-semibold mb-2">Transmissions par institution (90 jours)</h2><canvas id="c1"></canvas></div>
+          <div class="c"><h2 class="font-semibold mb-2">Évolution des observations</h2><canvas id="c2"></canvas></div>
+        </div>`;
+
+        new Chart($('#c1'), {
+          type: 'bar',
+          data: {
+            labels: Object.keys(k.transmissions_90j || {}),
+            datasets: [{ label: 'Transmissions', data: Object.values(k.transmissions_90j || {}), backgroundColor: '#0ea5e9' }]
+          }
         });
 
-        const data = await response.json();
+        const g = {};
+        (o || []).forEach(x => (g[x.indicator] ??= {})[x.periode] = x.valeur);
+        const ps = [...new Set((o || []).map(x => x.periode))].sort();
 
-        if (response.ok && data.token) {
-          localStorage.setItem('token', data.token);
-          showDashboard();
-        } else {
-          showError(data.error || 'Identifiants invalides');
-        }
-      } catch (error) {
-        showError('Impossible de contacter le serveur.');
+        new Chart($('#c2'), {
+          type: 'line',
+          data: {
+            labels: ps,
+            datasets: Object.entries(g).map(([n, m]) => ({ label: n, data: ps.map(p => m[p] ?? null), spanGaps: true }))
+          }
+        });
+      },
+
+      async ind() {
+        const d = await api('/indicators');
+        $('#app').innerHTML = tbl(['Code', 'Libellé', 'Institution', 'Unité', 'Classification', 'Métadonnées'], (d || []).map(x => [x.code, esc(x.libelle), x.institution || '', esc(x.unite), esc(x.classification), x.documente ? '✔ documenté' : 'à documenter'])) +
+        (canW() ? `<div class="c mt-4"><h2 class="font-semibold mb-2">Ajouter / documenter un indicateur</h2><div class="grid md:grid-cols-3 gap-2">${f('i1', 'Code (ex. EMP_TOT)')}${f('i2', 'Libellé')}${f('i3', 'Unité')}${f('i4', 'Définition (métadonnées de référence)')}</div>
+        <label class="text-sm"><input type="checkbox" id="i5" style="width:auto"> Métadonnées complètes</label><br><button class="b mt-2" onclick="saveInd()">Enregistrer</button></div>` : '');
+      },
+
+      async obs() {
+        const d = await api('/observations');
+        $('#app').innerHTML = tbl(['Indicateur', 'Institution', 'Période', 'Sexe', 'Valeur'], (d || []).slice(-200).reverse().map(x => [x.indicator, x.institution, x.periode, x.sexe, x.valeur])) +
+        (canW() ? `<div class="c mt-4"><h2 class="font-semibold mb-2">Transmettre des données</h2><p class="text-xs text-slate-400 mb-2">Une ligne par observation : INDICATEUR,PERIODE,VALEUR[,SEXE]</p>
+        <textarea id="o1" rows="5" placeholder="EMP_TOT,2025,152300&#10;UNEMP_TOT,2025,48.4"></textarea><button class="b mt-2" onclick="sendObs()">Transmettre</button></div>` : '<p class="text-sm text-slate-400 mt-3">Connectez-vous en tant qu\'administrateur de données pour transmettre.</p>');
+      },
+
+      async df() {
+        const d = await api('/dataflows');
+        $('#app').innerHTML = tbl(['Code', 'Libellé', 'Institution', 'DSD', 'Statut', 'Export / action'], (d || []).map(x => [x.code, esc(x.libelle), x.institution, esc(x.dsd), x.statut,
+        x.statut === 'valide' ? `<a class="text-sky-400 underline mr-2" href="${API}/sdmx/data/${x.code}" target="_blank">SDMX-ML</a><a class="text-sky-400 underline" href="${API}/sdmx/csv/${x.code}">SDMX-CSV</a>` : isAdmin() ? `<button class="b" onclick="valDf(${x.id})">Valider</button>` : ''])) +
+        `<p class="text-xs text-slate-400 mt-2">Catalogue SDMX : <a class="text-sky-400 underline" href="${API}/sdmx/datastructure" target="_blank">DSD et listes de codes</a> · <a class="text-sky-400 underline" href="${API}/sdmx/dataflow" target="_blank">${API}/sdmx/dataflow</a> · seuls les Dataflows validés sont diffusés.</p>` +
+        (canW() ? `<div class="c mt-4"><h2 class="font-semibold mb-2">Soumettre un Dataflow</h2><div class="grid md:grid-cols-4 gap-2">${f('d1', 'Code')}${f('d2', 'Libellé')}${f('d3', 'DSD')}${f('d4', 'Institution (code)')}</div><button class="b mt-2" onclick="saveDf()">Soumettre pour validation</button></div>` : '');
+      },
+
+      async req() {
+        $('#app').innerHTML = `<div class="c max-w-xl"><h2 class="font-semibold mb-1">Exprimer un besoin d'information</h2><p class="text-sm text-slate-400 mb-3">Citoyens, entreprises, ministères, partenaires : la Direction du Travail reçoit et traite chaque demande.</p>
+        ${f('r1', 'Nom')}${f('r2', 'E-mail', 'email')}${f('r3', 'Organisation')}${f('r4', 'Sujet')}<label class="block text-sm mb-2">Message<textarea id="r5" rows="4"></textarea></label><button class="b" onclick="sendReq()">Envoyer ma demande</button></div>`;
+      },
+
+      async act() {
+        const d = await api('/actions');
+        $('#app').innerHTML = tbl(['Action', 'Responsable', 'Échéance', 'Statut'], (d || []).map(x => [esc(x.titre), esc(x.responsable), x.echeance || '', isAdmin() ? `<select onchange="api('/actions/${x.id}','PATCH',{statut:this.value})">${['a_faire', 'en_cours', 'fait'].map(s => `<option ${s === x.statut ? 'selected' : ''}>${s}</option>`)}</select>` : x.statut])) +
+        (isAdmin() ? `<div class="c mt-4"><div class="grid md:grid-cols-3 gap-2">${f('a1', 'Action')}${f('a2', 'Responsable')}${f('a3', 'Échéance', 'date')}</div><button class="b mt-2" onclick="send(()=>api('/actions','POST',{titre:v('a1'),responsable:v('a2'),echeance:v('a3')||null}),'Action ajoutée')">Ajouter</button></div>` : '');
+      },
+
+      async adm() {
+        const [u, r] = await Promise.all([api('/users'), api('/requests')]);
+        $('#app').innerHTML = `<h2 class="font-semibold mb-2">Demandes reçues</h2>` + tbl(['Date', 'De', 'Sujet', 'Message', 'Statut'], (r || []).map(x => [x.cree_le ? x.cree_le.slice(0, 10) : '', esc(x.nom || x.email), esc(x.sujet), esc(x.message),
+        `<select onchange="api('/requests/${x.id}','PATCH',{statut:this.value})">${['nouvelle', 'en_cours', 'traitee'].map(s => `<option ${s === x.statut ? 'selected' : ''}>${s}</option>`)}</select>`])) +
+        `<h2 class="font-semibold mt-6 mb-2">Comptes</h2>` + tbl(['E-mail', 'Rôle', 'Institution'], (u || []).map(x => [esc(x.email), x.role, x.institution || ''])) +
+        `<div class="c mt-4"><h3 class="font-semibold mb-2">Créer un compte</h3><div class="grid md:grid-cols-5 gap-2">${f('u1', 'E-mail', 'email')}${f('u2', 'Nom')}${f('u3', 'Mot de passe', 'password')}
+        <label class="text-sm">Rôle<select id="u4"><option value="data_admin">Administrateur de données</option><option value="lecteur">Lecteur (ministre)</option><option value="admin">Admin</option></select></label>${f('u5', 'Institution (ANEFIP, CNSS, INSTAD, IGT, DT)')}</div>
+        <button class="b mt-2" onclick="send(()=>api('/users','POST',{email:v('u1'),nom:v('u2'),password:v('u3'),role:v('u4'),institution:v('u5')||null}),'Compte créé')">Créer</button></div>`;
+      },
+
+      async login() {
+        $('#app').innerHTML = `<div class="c max-w-sm">${f('l1', 'E-mail', 'email')}${f('l2', 'Mot de passe', 'password')}<button class="b" onclick="login()">Se connecter</button></div>`;
       }
-    });
+    };
 
-    // 3. UI Helpers
-    function showError(msg) {
-      loginMessage.textContent = msg;
-      loginMessage.className = 'alert alert-error';
+    async function login() {
+      try {
+        const j = await api('/auth/login', 'POST', { email: v('l1'), password: v('l2') });
+        S.token = j.token;
+        S.user = j.user;
+        localStorage.t = j.token;
+        localStorage.u = JSON.stringify(j.user);
+        go('dash');
+      } catch (e) {
+        alert(e.message);
+      }
     }
 
-    function showDashboard() {
-      loginCard.classList.add('hidden');
-      dashboardCard.classList.remove('hidden');
-    }
+    const saveInd = () => send(() => api('/indicators', 'POST', { code: v('i1'), libelle: v('i2'), unite: v('i3'), definition: v('i4'), documente: $('#i5').checked, institution: S.user.institution || 'DT' }), 'Indicateur enregistré');
+    const saveDf = () => send(() => api('/dataflows', 'POST', { code: v('d1'), libelle: v('d2'), dsd: v('d3'), institution: v('d4') || S.user.institution }), 'Dataflow soumis');
+    const valDf = id => send(() => api('/dataflows/' + id + '/valider', 'POST', {}), 'Dataflow validé');
+    const sendObs = () => send(() => api('/observations', 'POST', v('o1').split('\n').filter(Boolean).map(l => { const [indicator, periode, valeur, sexe] = l.split(',').map(s => s.trim()); return { indicator, periode, valeur, sexe, institution: S.user.institution }; })), 'Données transmises');
+    const sendReq = () => send(() => api('/requests', 'POST', { nom: v('r1'), email: v('r2'), organisation: v('r3'), sujet: v('r4'), message: v('r5') }), 'Demande envoyée, merci');
 
-    logoutBtn.addEventListener('click', () => {
-      localStorage.removeItem('token');
-      dashboardCard.classList.add('hidden');
-      loginCard.classList.remove('hidden');
-    });
-
-    // Initialize Page
-    checkBackendConnection();
-    if (localStorage.getItem('token')) {
-      showDashboard();
-    }
+    go('dash');
   </script>
 </body>
 </html>
