@@ -5,13 +5,13 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { createClient } = require('@supabase/supabase-js');
 
-// Support multiple environment variable naming variations
+// Environment variable resolution
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY;
-const jwtSecret = process.env.JWT_SECRET || process.env['JWT-SECRET'];
+const jwtSecret = process.env.JWT_SECRET || process.env['JWT-SECRET'] || 'simt-default-secret-key';
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('CRITICAL ERROR: Missing SUPABASE_URL or SUPABASE_SERVICE_KEY/SUPABASE_KEY!');
+  console.error('CRITICAL ERROR: Missing SUPABASE_URL or SUPABASE_KEY!');
 } else {
   console.log('Supabase client initialized successfully.');
 }
@@ -19,8 +19,15 @@ if (!supabaseUrl || !supabaseKey) {
 const db = createClient(supabaseUrl, supabaseKey);
 
 const app = express();
+
+// Permissive CORS configuration to allow local file & localhost fetches
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
-app.use(cors({ origin: process.env.FRONT_ORIGIN || '*' }));
 
 const wrap = f => (q, r) => f(q, r).catch(e => r.status(500).json({ error: e.message }));
 
@@ -39,7 +46,7 @@ const ADMIN = auth(['admin']);
 const WRITER = auth(['admin', 'data_admin']);
 const ok = (r, { data, error }) => error ? r.status(400).json({ error: error.message }) : r.json(data);
 
-// Bootstrapping: create admin account if table is empty
+// Bootstrapping admin account
 (async () => {
   try {
     const { count } = await db.from('users').select('*', { count: 'exact', head: true });
@@ -54,7 +61,7 @@ const ok = (r, { data, error }) => error ? r.status(400).json({ error: error.mes
       console.log('Admin account bootstrapped.');
     }
   } catch (err) {
-    console.error('Error during admin bootstrap:', err.message);
+    console.error('Bootstrap check error:', err.message);
   }
 })();
 
@@ -69,7 +76,7 @@ app.post('/auth/login', wrap(async (q, r) => {
   r.json({ token: jwt.sign(user, jwtSecret, { expiresIn: '8h' }), user });
 }));
 
-// Admin routes
+// Admin endpoints
 app.post('/users', ADMIN, wrap(async (q, r) => {
   const { email, nom, role, institution, password } = q.body;
   ok(r, await db.from('users').insert({ email, nom, role, institution, hash: bcrypt.hashSync(password, 10) }).select('id,email,role,institution').single());
@@ -77,7 +84,7 @@ app.post('/users', ADMIN, wrap(async (q, r) => {
 
 app.get('/users', ADMIN, wrap(async (q, r) => ok(r, await db.from('users').select('id,email,nom,role,institution'))));
 
-// Public routes
+// Public reads
 app.get('/institutions', wrap(async (q, r) => ok(r, await db.from('institutions').select('*'))));
 app.get('/indicators', wrap(async (q, r) => ok(r, await db.from('indicators').select('*').order('code'))));
 app.get('/dataflows', wrap(async (q, r) => ok(r, await db.from('dataflows').select('*').order('code'))));
@@ -87,7 +94,7 @@ app.get('/observations', wrap(async (q, r) => {
   ok(r, await s.limit(2000));
 }));
 
-// Data entries
+// Data writes
 const own = (q, r, code) => q.user.role === 'admin' || q.user.institution === code;
 
 app.post('/indicators', WRITER, wrap(async (q, r) => {
@@ -113,7 +120,7 @@ app.post('/observations', WRITER, wrap(async (q, r) => {
   r.json({ inserees: clean.length });
 }));
 
-// Requests
+// Citizen requests
 app.post('/requests', wrap(async (q, r) => {
   if (!q.body.sujet) return r.status(400).json({ error: 'Sujet requis' });
   const { nom, email, organisation, sujet, message } = q.body;
@@ -123,7 +130,7 @@ app.post('/requests', wrap(async (q, r) => {
 app.get('/requests', ADMIN, wrap(async (q, r) => ok(r, await db.from('requests').select('*').order('cree_le', { ascending: false }))));
 app.patch('/requests/:id', ADMIN, wrap(async (q, r) => ok(r, await db.from('requests').update({ statut: q.body.statut }).eq('id', q.params.id).select().single())));
 
-// Actions
+// Action plans
 app.get('/actions', auth(), wrap(async (q, r) => ok(r, await db.from('actions').select('*').order('echeance'))));
 app.post('/actions', ADMIN, wrap(async (q, r) => ok(r, await db.from('actions').insert(q.body).select().single())));
 app.patch('/actions/:id', ADMIN, wrap(async (q, r) => ok(r, await db.from('actions').update({ statut: q.body.statut }).eq('id', q.params.id).select().single())));
@@ -150,7 +157,7 @@ app.get('/kpi', wrap(async (q, r) => {
   });
 }));
 
-// SDMX Export Helper Functions & Routes
+// SDMX Export Helpers & Routes
 const X = s => String(s ?? '').replace(/[<>&"']/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[c]));
 const NS = 'xmlns:message="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message" xmlns:common="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common" xmlns:generic="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/data/generic" xmlns:structure="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure" xmlns:xml="http://www.w3.org/XML/1998/namespace"';
 const hdr = () => `<message:Header><message:ID>LMIS-DJ-${Date.now()}</message:ID><message:Test>false</message:Test><message:Prepared>${new Date().toISOString()}</message:Prepared><message:Sender id="DJ_MTFPS"/></message:Header>`;

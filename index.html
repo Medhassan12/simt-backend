@@ -29,8 +29,8 @@
   <main id="app" class="p-4 max-w-6xl mx-auto"></main>
 
   <script>
-    // Live SIMT Render Backend Endpoint
-    const API = 'https://slmt-backend-kmsm.onrender.com';
+    // Live SIMT Render Endpoint
+    const API = 'https://simt-backend-kmsm.onrender.com';
 
     let S = { tab: 'dash', user: JSON.parse(localStorage.u || 'null'), token: localStorage.t || '' };
 
@@ -85,7 +85,7 @@
       V[t]().catch(e => $('#app').innerHTML = `<p class="c text-red-300">${esc(e.message)} (l'API Render peut mettre 30 s à se réveiller)</p>`);
     }
 
-    const tbl = (h, rows) => `<div class="c overflow-x-auto"><table class="w-full text-sm"><tr>${h.map(x => `<th>${x}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(x => `<td>${x}</td>`).join('')}</tr>`).join('') || '<tr><td colspan="${h.length}">Aucune donnée pour le moment.</td></tr>'}</table></div>`;
+    const tbl = (h, rows) => `<div class="c overflow-x-auto"><table class="w-full text-sm"><tr>${h.map(x => `<th>${x}</th>`).join('')}</tr>${rows.map(r => `<tr>${r.map(x => `<td>${x}</td>`).join('')}</tr>`).join('') || '<tr><td colspan="' + h.length + '">Aucune donnée pour le moment.</td></tr>'}</table></div>`;
     const f = (id, l, t = 'text') => `<label class="block text-sm mb-2">${l}<input id="${id}" type="${t}"></label>`;
     const v = id => $('#' + id).value;
     const send = async (fn, msg) => {
