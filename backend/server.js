@@ -8,8 +8,13 @@ app.use(express.json());
 app.use(cors());
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+    console.error("Erreur critique: SUPABASE_URL ou SUPABASE_KEY (ou SUPABASE_ANON_KEY) est manquant dans les variables d'environnement.");
+}
+
+const supabase = createClient(supabaseUrl || '', supabaseKey || '');
 
 // Initialisation du compte administrateur principal au démarrage
 async function initAdmin() {
@@ -177,6 +182,4 @@ app.get('/api/dashboard', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
-    console.log(`Serveur SIMT opérationnel sur le port ${PORT}`);
-    await initAdmin();
-});
+    console.log(`Serveur SIMT opérationnel sur le
