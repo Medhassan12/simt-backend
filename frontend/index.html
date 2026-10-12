@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIMT - Système d'Information sur le Marché du Travail</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+    <!-- En-tête -->
+    <header class="bg-blue-900 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold">République de Djibouti</h1>
+                <p class="text-xs text-blue-200">Système d'Information sur le Marché du Travail (SIMT)</p>
+            </div>
+            <span class="text-sm bg-blue-800 px-3 py-1 rounded">Ministère du Travail</span>
+        </div>
+    </header>
+
+    <!-- Contenu Principal -->
+    <main class="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-4 gap-6">
+        <!-- Navigation -->
+        <nav class="bg-white p-4 rounded-lg shadow space-y-2 md:col-span-1 h-fit">
+            <a href="#dashboard" class="block p-2 rounded bg-blue-50 text-blue-700 font-medium">Tableau de bord</a>
+            <a href="#dataflows" class="block p-2 rounded hover:bg-slate-100">Dataflows & SDMX</a>
+            <a href="#needs" class="block p-2 rounded hover:bg-slate-100">Déposer un besoin</a>
+        </nav>
+
+        <!-- Dynamic Content -->
+        <section class="md:col-span-3 space-y-6">
+            <!-- Tableau de bord -->
+            <div id="dashboard" class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-semibold mb-4 text-blue-900">Indicateurs de Suivi du SIMT</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-slate-50 p-4 rounded border">
+                        <p class="text-xs text-slate-500 uppercase font-bold">Indicateurs documentés</p>
+                        <p id="stat-doc" class="text-2xl font-bold text-blue-600">-</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded border">
+                        <p class="text-xs text-slate-500 uppercase font-bold">Dataflows validés</p>
+                        <p id="stat-flows" class="text-2xl font-bold text-blue-600">-</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded border">
+                        <p class="text-xs text-slate-500 uppercase font-bold">Régularité (90j)</p>
+                        <p class="text-2xl font-bold text-green-600">94%</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded border">
+                        <p class="text-xs text-slate-500 uppercase font-bold">Disponibilité</p>
+                        <p class="text-2xl font-bold text-green-600">99.9%</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modules SDMX -->
+            <div id="dataflows" class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-semibold mb-2 text-blue-900">Flux SDMX 2.1 & Harmonisation .Stat</h2>
+                <p class="text-sm text-slate-600 mb-4">Téléchargez ou liez vos données au format standard international défini avec le BIT :</p>
+                <div class="flex gap-4 flex-wrap">
+                    <a id="link-dsd" href="#" target="_blank" class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-medium hover:bg-blue-700">DSD & Structure (XML)</a>
+                    <a id="link-catalog" href="#" target="_blank" class="bg-slate-800 text-white px-4 py-2 rounded text-sm font-medium hover:bg-slate-900">Catalogue Dataflows (XML)</a>
+                </div>
+            </div>
+
+            <!-- Formulaire Public -->
+            <div id="needs" class="bg-white p-6 rounded-lg shadow">
+                <h2 class="text-xl font-semibold mb-4 text-blue-900">Déposer un besoin d'information</h2>
+                <form class="space-y-4">
+                    <input type="text" placeholder="Nom complet / Institution" class="w-full p-2 border rounded border-slate-300">
+                    <input type="email" placeholder="Adresse e-mail de contact" class="w-full p-2 border rounded border-slate-300">
+                    <textarea placeholder="Description du besoin statistique ou du rapport souhaité..." class="w-full p-2 border rounded border-slate-300 h-24"></textarea>
+                    <button type="button" onclick="alert('Demande enregistrée.')" class="bg-blue-600 text-white px-4 py-2 rounded font-medium hover:bg-blue-700">Soumettre la demande</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Remplacez cette URL par votre URL Render finale
+        const API_URL = 'http://localhost:3000';
+
+        document.getElementById('link-dsd').href = `${API_URL}/sdmx/datastructure`;
+        document.getElementById('link-catalog').href = `${API_URL}/sdmx/dataflow`;
+
+        fetch(`${API_URL}/api/dashboard`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('stat-doc').innerText = data.documented_indicators;
+                document.getElementById('stat-flows').innerText = data.validated_dataflows;
+            })
+            .catch(err => console.log('Connexion API en attente de déploiement...'));
+    </script>
+</body>
+</html>
